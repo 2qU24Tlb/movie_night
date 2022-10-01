@@ -1,6 +1,8 @@
 const functions = require('@google-cloud/functions-framework');
 const rclone = require("rclone.js").promises;
+const sgMail = require('@sendgrid/mail')
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 function formatDate(dateObj) {
   return dateObj.getFullYear().toString() + "年/" +
@@ -9,43 +11,73 @@ function formatDate(dateObj) {
 }
 
 function parseMoveList(moveList) {
-  const entries = moveList.split(/\r?\nn/)
-  const movies = Array()
+  const entries = moveList.split(/\n/)
+  const movieList = []
+
   for (const i of entries) {
-    movies.push(i.slice(43).trim())
+    if (i.trim().length != 0) {
+      movieList.push(i.slice(43))
+    }
   }
 
-  return movies
+  return movieList
 }
 
 async function listDir(dir) {
   console.log("checking " + dir)
-  const curMovies = []
+  var dayMovies = []
 
   await rclone.lsd("qyd:/" + dir, {
     "max-depth": 1,
     "env": { RCLONE_CONFIG: "rclone.conf" },
   }).then((moviesStr) => {
-    const newMovies = parseMoveList(moviesStr.toString())
-    for (const i of newMovies) {
-      curMovies.push(i)
-    }
+    dayMovies = parseMoveList(moviesStr.toString())
   }).catch(error => console.error(error.toString()))
-
-  return curMovies
+  
+  return dayMovies
 }
 
-(async () => {
+async function send_email(text) {
+  const msg = {
+    from: 'unioah@outlook.com',
+    to: 'unioah@gmail.com', 
+    subject: 'New Movie list',
+    html: text,
+  }
+
+  await sgMail
+    .send(msg)
+    .then((response) => {
+      console.log(response[0].statusCode)
+    })
+    .catch((error) => {
+      console.error(error.response.body.errors)
+    })
+}
+
+async function listMovies() {
   const start = new Date()
-  const allMovies = []
+  const allMovies = new Map()
 
   for (let step = 0; step < 7; step++) {
     start.setDate(start.getDate() - 1)
-    const dayMovies = await listDir("日更电影/" + formatDate(start))
-    for (const movie of dayMovies) {
-      allMovies.push(movie)
-    }
+    const dateStr = "日更电影/" + formatDate(start)
+    allMovies.set(dateStr, await listDir(dateStr))
   }
 
-  console.log(allMovies)
-})();
+  var text = "<table>"
+  text += "<tr><th>Path</th><th>Movie</th></tr>"
+  allMovies.forEach((movies, day) => {
+    if (movies.length != 0) {
+      movies.forEach(movie => text += `<tr><td>${day}</td><td>${movie}</td></tr>`)
+    }
+  })
+  text += "</table>"
+  await send_email(text)
+}
+
+exports.movies = listMovies
+
+// (async () => {
+//   await listMovies()
+// })();

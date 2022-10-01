@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@google-cloud/functions-framework": "^3.1.2",
+    "@sendgrid/mail": "^7.7.0",
     "google-it": "^1.6.3",
     "rclone.js": "^0.6.6"
   },
@@ -8,7 +9,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "functions-framework --target=helloWorld"
+    "start": "functions-framework --target=movies"
   },
   "author": "",
   "license": "ISC",
