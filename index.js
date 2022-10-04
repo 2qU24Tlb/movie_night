@@ -29,7 +29,7 @@ async function listDir(dir) {
 
   await rclone.lsd("qyd:/" + dir, {
     "max-depth": 1,
-    "env": { RCLONE_CONFIG: "rclone.conf" },
+    "env": { RCLONE_CONFIG: "/run/rclone" },
   }).then((moviesStr) => {
     dayMovies = parseMoveList(moviesStr.toString())
   }).catch(error => console.error(error.toString()))
@@ -73,6 +73,7 @@ async function listMovies() {
     }
   })
   text += "</table>"
+
   await send_email(text)
 }
 
