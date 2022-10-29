@@ -1,8 +1,13 @@
-const functions = require('@google-cloud/functions-framework');
-const rclone = require("rclone.js").promises;
+const functions = require('@google-cloud/functions-framework')
+const rclone = require("rclone.js").promises
 const sgMail = require('@sendgrid/mail')
+const { customsearch } = require('@googleapis/customsearch')
+
+const Douban = require('./douban/MovieDetail')
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+const google_search = customsearch('v1')
+const douban = new Douban()
 
 function formatDate(dateObj) {
   return dateObj.getFullYear().toString() + "年/" +
@@ -25,7 +30,7 @@ function parseMoveList(moveList) {
 
 async function listDir(dir) {
   console.log("checking " + dir)
-  var dayMovies = []
+  let dayMovies = []
 
   await rclone.lsd("qyd:/" + dir, {
     "max-depth": 1,
@@ -33,14 +38,14 @@ async function listDir(dir) {
   }).then((moviesStr) => {
     dayMovies = parseMoveList(moviesStr.toString())
   }).catch(error => console.error(error.toString()))
-  
+
   return dayMovies
 }
 
 async function send_email(text) {
   const msg = {
     from: 'unioah@outlook.com',
-    to: 'unioah@gmail.com', 
+    to: 'unioah@gmail.com',
     subject: 'New Movie list',
     html: text,
   }
@@ -55,21 +60,41 @@ async function send_email(text) {
     })
 }
 
+async function searchDouban(text) {
+  const params = { cx: '67d974c96f8984b37', q: text, auth: "" }
+
+  const res = await google_search.cse.list(params)
+
+  for (const item of res.data.items) {
+    if (item.link.includes('subject')) {
+      const url = item.formattedUrl.substring(33).replace('/', '')
+      var data = await douban.getMovieData(url)
+      data.url = item.formattedUrl
+      console.log(data)
+
+      return data
+    }
+  }
+}
+
 async function listMovies() {
   const start = new Date()
   const allMovies = new Map()
 
-  for (let step = 0; step < 7; step++) {
+  for (let step = 0; step < 2; step++) {
     start.setDate(start.getDate() - 1)
     const dateStr = "日更电影/" + formatDate(start)
     allMovies.set(dateStr, await listDir(dateStr))
   }
 
-  var text = "<table>"
-  text += "<tr><th>Path</th><th>Movie</th></tr>"
+  let text = "<table>"
+  text += "<tr><th>Movie</th><th>Rating</th></tr>"
   allMovies.forEach((movies, day) => {
     if (movies.length != 0) {
-      movies.forEach(movie => text += `<tr><td>${day}</td><td>${movie}</td></tr>`)
+      movies.forEach(async movie => {
+        const movie_meta = await searchDouban(movie)
+        text += `<tr><td><a href="${day}">${movie}</a></td><td><a href="${movie_meta.url}">${movie_meta.rating}</a></td></tr>`
+      })
     }
   })
   text += "</table>"

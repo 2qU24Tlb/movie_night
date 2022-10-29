@@ -1,9 +1,12 @@
 {
   "dependencies": {
     "@google-cloud/functions-framework": "^3.1.2",
+    "@googleapis/customsearch": "^1.0.0",
     "@sendgrid/mail": "^7.7.0",
-    "google-it": "^1.6.3",
-    "rclone.js": "^0.6.6"
+    "cheerio": "^1.0.0-rc.12",
+    "querystring": "^0.2.1",
+    "rclone.js": "^0.6.6",
+    "request": "^2.88.2"
   },
   "name": "google_functions",
   "version": "1.0.0",
