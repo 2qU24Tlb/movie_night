@@ -7,7 +7,7 @@ gcloud functions deploy movie-night --region=northamerica-northeast1 --runtime=n
 #TODOs:
 - list movies uploaded last week  [v]
 - send email for these movies [v]
-- search google for name and douban link
-- connect douban API to get image, description, rate
+- search google for name and douban link [v]
+- connect douban API to get image, description, rate [v]
 - Add CI/CD from github.
 

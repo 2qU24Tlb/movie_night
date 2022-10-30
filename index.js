@@ -2,12 +2,11 @@ const functions = require('@google-cloud/functions-framework')
 const rclone = require("rclone.js").promises
 const sgMail = require('@sendgrid/mail')
 const { customsearch } = require('@googleapis/customsearch')
+require('dotenv').config()
 
 const Douban = require('./douban/MovieDetail')
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-const google_search = customsearch('v1')
-const douban = new Douban()
 
 function formatDate(dateObj) {
   return dateObj.getFullYear().toString() + "年/" +
@@ -60,49 +59,80 @@ async function send_email(text) {
     })
 }
 
-async function searchDouban(text) {
-  const params = { cx: '67d974c96f8984b37', q: text, auth: "" }
+async function searchGoogle(movieName) {
+  const search = customsearch('v1')
+  const params = { cx: '67d974c96f8984b37', q: movieName, auth: process.env.CUSTOM_SEARCH }
 
-  const res = await google_search.cse.list(params)
+  return await search.cse.list(params).catch(console.error)
+}
 
-  for (const item of res.data.items) {
+async function searchDouban(movieID) {
+  const douban = new Douban()
+
+  return await douban.getMovieData(movieID).catch(console.error)
+}
+
+function getDoubanID(google_results) {
+  for (const item of google_results) {
     if (item.link.includes('subject')) {
-      const url = item.formattedUrl.substring(33).replace('/', '')
-      var data = await douban.getMovieData(url)
-      data.url = item.formattedUrl
-      console.log(data)
-
-      return data
+      const movieID = item.formattedUrl.substring(33).replace('/', '')
+      return { id: movieID, url: item.formattedUrl }
     }
   }
+
+  return { id: '', url: '' }
+}
+
+function getMovieName(orig) {
+  let newName = orig
+  if (orig.indexOf('.') != -1) {
+    const dot = orig.indexOf('.')
+    newName = orig.substring(0, dot)
+  }
+
+  return newName
 }
 
 async function listMovies() {
   const start = new Date()
-  const allMovies = new Map()
+  let text = "<table>"
+  text += "<tr><th>Movie</th><th>Rating</th></tr>"
 
   for (let step = 0; step < 2; step++) {
     start.setDate(start.getDate() - 1)
     const dateStr = "日更电影/" + formatDate(start)
-    allMovies.set(dateStr, await listDir(dateStr))
+    const movies = await listDir(dateStr)
+
+    for (let movie of movies) {
+      const movieName = getMovieName(movie)
+      const { data } = await searchGoogle(movieName)
+      let movieID = ''
+      let doubanURL = ''
+
+      if ('items' in data) {
+        const { id, url } = getDoubanID(data.items)
+        movieID = id
+        doubanURL = url
+      }
+
+      let movieRating = null
+      if (movieID != '') {
+        const { rating } = await searchDouban(movieID)
+        movieRating = rating
+      }
+
+      text += `<tr><td><a href="${dateStr}">${movie}</a></td><td><a href="${doubanURL}">${movieRating}</a></td></tr>`
+    }
   }
 
-  let text = "<table>"
-  text += "<tr><th>Movie</th><th>Rating</th></tr>"
-  allMovies.forEach((movies, day) => {
-    if (movies.length != 0) {
-      movies.forEach(async movie => {
-        const movie_meta = await searchDouban(movie)
-        text += `<tr><td><a href="${day}">${movie}</a></td><td><a href="${movie_meta.url}">${movie_meta.rating}</a></td></tr>`
-      })
-    }
-  })
   text += "</table>"
 
   await send_email(text)
 }
 
 exports.movies = listMovies
+exports.searchGoogle = searchGoogle
+exports.searchDouban = searchDouban
 
 // (async () => {
 //   await listMovies()

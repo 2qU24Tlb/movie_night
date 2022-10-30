@@ -4,6 +4,7 @@
     "@googleapis/customsearch": "^1.0.0",
     "@sendgrid/mail": "^7.7.0",
     "cheerio": "^1.0.0-rc.12",
+    "dotenv": "^16.0.3",
     "querystring": "^0.2.1",
     "rclone.js": "^0.6.6",
     "request": "^2.88.2"
@@ -12,9 +13,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "functions-framework --target=movies"
+    "start": "functions-framework --target=movies",
+    "test": "mocha"
   },
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "devDependencies": {
+    "mocha": "^10.1.0"
+  }
 }
