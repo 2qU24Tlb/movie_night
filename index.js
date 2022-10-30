@@ -98,7 +98,7 @@ async function listMovies() {
   let text = "<table>"
   text += "<tr><th>Movie</th><th>Rating</th></tr>"
 
-  for (let step = 0; step < 2; step++) {
+  for (let step = 0; step < 7; step++) {
     start.setDate(start.getDate() - 1)
     const dateStr = "日更电影/" + formatDate(start)
     const movies = await listDir(dateStr)
