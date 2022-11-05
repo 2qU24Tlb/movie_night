@@ -1,0 +1,34 @@
+name: Google Function Deploy
+run-name: Test Google Function Deploy
+on: [push]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - id: auth
+      uses: google-github-actions/auth@v0
+      with:
+        workload_identity_provider: 'projects/199512978444/locations/global/workloadIdentityPools/pool/providers/github'
+        service_account: 'movie-list-364119@appspot.gserviceaccount.com'
+        project_id: 'movie-list-364119'
+
+    - id: 'deploy'
+      uses: 'google-github-actions/deploy-cloud-functions@v0'
+      with:
+        name: 'movie-night2'
+        runtime: 'nodejs16'
+        region: 'northamerica-northeast1'
+        event_trigger_type: 'google.pubsub.topic.publish'
+        event_trigger_resource: 'projects/movie-list-364119/topics/cron-topic'
+        event_trigger_service: 'pubsub.googleapis.com'
+        secret_environment_variables:
+          'SENDGRID_API_KEY=projects/199512978444/secrets/SENDGRID_API_KEY/versions/1,CUSTOM_SEARCH=projects/199512978444/secrets/search_api/versions/1'
+        secret_volumes: 
+          '/run/rclone=projects/199512978444/secrets/rclone'
+        max_instances: 1
