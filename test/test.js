@@ -4,7 +4,6 @@ const { searchGoogle, searchDouban, movies } = require('../index')
 describe('Google', function () {
     it('Should return search results', async function () {
         const { data: { items } } = await searchGoogle("batman")
-        console.log(items)
 
         assert.notEqual(items, null)
     })

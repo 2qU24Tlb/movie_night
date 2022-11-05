@@ -2,11 +2,21 @@ const functions = require('@google-cloud/functions-framework')
 const rclone = require("rclone.js").promises
 const sgMail = require('@sendgrid/mail')
 const { customsearch } = require('@googleapis/customsearch')
+const winston = require('winston')
 require('dotenv').config()
 
 const Douban = require('./douban/MovieDetail')
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+
+const logger = winston.createLogger({
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(), winston.format.simple())
+    })
+  ]
+});
 
 function formatDate(dateObj) {
   return dateObj.getFullYear().toString() + "年/" +
@@ -36,7 +46,7 @@ async function listDir(dir) {
     "env": { RCLONE_CONFIG: "/run/rclone" },
   }).then((moviesStr) => {
     dayMovies = parseMoveList(moviesStr.toString())
-  }).catch(error => console.error(error.toString()))
+  }).catch(error => console.error(`rclone error: ${error.toString()}`))
 
   return dayMovies
 }
@@ -60,13 +70,16 @@ async function send_email(text) {
 }
 
 async function searchGoogle(movieName) {
+  logger.info(`search google for movie ${movieName}`)
   const search = customsearch('v1')
   const params = { cx: '67d974c96f8984b37', q: movieName, auth: process.env.CUSTOM_SEARCH }
 
-  return await search.cse.list(params).catch(console.error)
+  return await search.cse.list(params).catch(
+    err => { console.error(`'unable to search Google: ${err}`) })
 }
 
 async function searchDouban(movieID) {
+  logger.info(`Search douban ${movieID}`)
   const douban = new Douban()
 
   return await douban.getMovieData(movieID).catch(console.error)
@@ -105,15 +118,18 @@ async function listMovies() {
 
     for (let movie of movies) {
       const movieName = getMovieName(movie)
+      // sleep 1 sec
+      await new Promise(r => setTimeout(r, 1000));
       const { data } = await searchGoogle(movieName)
+
       let movieID = ''
       let doubanURL = ''
-
       if ('items' in data) {
         const { id, url } = getDoubanID(data.items)
         movieID = id
         doubanURL = url
       }
+
 
       let movieRating = null
       if (movieID != '') {
@@ -133,7 +149,3 @@ async function listMovies() {
 exports.movies = listMovies
 exports.searchGoogle = searchGoogle
 exports.searchDouban = searchDouban
-
-// (async () => {
-//   await listMovies()
-// })();
