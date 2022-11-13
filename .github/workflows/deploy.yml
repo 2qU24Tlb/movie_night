@@ -21,7 +21,7 @@ jobs:
     - id: 'deploy'
       uses: 'google-github-actions/deploy-cloud-functions@v0'
       with:
-        name: 'movie-night2'
+        name: 'movie-night'
         runtime: 'nodejs16'
         region: 'northamerica-northeast1'
         event_trigger_type: 'google.pubsub.topic.publish'
