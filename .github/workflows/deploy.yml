@@ -22,8 +22,9 @@ jobs:
       uses: 'google-github-actions/deploy-cloud-functions@v0'
       with:
         name: 'movie-night'
-        runtime: 'nodejs16'
         region: 'northamerica-northeast1'
+        runtime: 'nodejs16'
+        entry_point: movies
         event_trigger_type: 'google.pubsub.topic.publish'
         event_trigger_resource: 'projects/movie-list-364119/topics/cron-topic'
         event_trigger_service: 'pubsub.googleapis.com'
