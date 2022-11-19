@@ -112,7 +112,7 @@ function getMovieName(orig) {
   return newName
 }
 
-async function listMovies(days=7) {
+async function listMovies(req, res, days = 7) {
   const start = new Date()
   let text = "<table>"
   text += "<tr><th>Movie</th><th>Rating</th></tr>"
