@@ -71,6 +71,7 @@ async function send_email(text) {
 
 async function searchGoogle(movieName) {
   logger.info(`search google for movie ${movieName}`)
+  await new Promise(r => setTimeout(r, 2000));
   const search = customsearch('v1')
   const params = { cx: '67d974c96f8984b37', q: movieName, auth: process.env.CUSTOM_SEARCH }
 
@@ -112,7 +113,9 @@ function getMovieName(orig) {
   return newName
 }
 
-async function listMovies(req, res, days = 7) {
+async function listMovies(req, res, days = 7,
+  google = true, douban = true, email = true) {
+
   const start = new Date()
   let text = "<table>"
   text += "<tr><th>Movie</th><th>Rating</th></tr>"
@@ -124,20 +127,21 @@ async function listMovies(req, res, days = 7) {
 
     for (let movie of movies) {
       const movieName = getMovieName(movie)
-      // sleep 2 sec
-      await new Promise(r => setTimeout(r, 2000));
-      const { data } = await searchGoogle(movieName)
-
-      let movieID = ''
       let doubanURL = ''
-      if ('items' in data && data.items) {
-        const { id, url } = getDoubanID(data.items)
-        movieID = id
-        doubanURL = url
+      let movieRating = null
+      let movieID = ''
+
+      if (google) {
+        const { data } = await searchGoogle(movieName)
+
+        if ('items' in data && data.items) {
+          const { id, url } = getDoubanID(data.items)
+          movieID = id
+          doubanURL = url
+        }
       }
 
-      let movieRating = null
-      if (movieID != '') {
+      if (movieID != '' && douban) {
         const { rating } = await searchDouban(movieID)
         movieRating = rating
       }
@@ -148,7 +152,10 @@ async function listMovies(req, res, days = 7) {
 
   text += "</table>"
 
-  await send_email(text)
+  logger.info(text)
+  if (email) {
+    await send_email(text)
+  }
 }
 
 exports.movies = listMovies
