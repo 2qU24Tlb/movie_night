@@ -71,7 +71,7 @@ async function send_email(text) {
 
 async function searchGoogle(movieName) {
   logger.info(`search google for movie ${movieName}`)
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise(r => setTimeout(r, 1000));
   const search = customsearch('v1')
   const params = { cx: '67d974c96f8984b37', q: movieName, auth: process.env.CUSTOM_SEARCH }
 
@@ -124,6 +124,11 @@ async function listMovies(req, res, days = 7,
     start.setDate(start.getDate() - 1)
     const dateStr = "日更电影/" + formatDate(start)
     const movies = await listDir(dateStr)
+    if (movies.length > 7) {
+      useSearch = false
+      google = false
+      douban = false
+    }
 
     for (let movie of movies) {
       const movieName = getMovieName(movie)
